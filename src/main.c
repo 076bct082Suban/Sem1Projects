@@ -5,8 +5,6 @@
 #include<SDL_image.h>
 #include<stdlib.h>
 
-#include "stuff.h"
-
 #include <SDL2/SDL.h>
 #include "stuff.h"
 
@@ -160,10 +158,17 @@ void clickBlock(struct game_t *game, int index){
         if(checkIfWon(game) == 1){
             printf("yay");
             game->state = game->player;
-        }else if(checkIfTie() == 0){ // tie
+        }else if(checkIfTie() == 1){ // tie
             game->state = TIE_STATE;
         }else{
             switchPlayer(game);
+            clickAI(game);
+            if(checkIfWon(game) == 1){
+                printf("\nyay ai works");
+                game->state = 2; // code is already spegatti
+                }
+            switchPlayer(game);
+
         }
     }
 
@@ -189,7 +194,7 @@ void switchPlayer(struct game_t *game){
 }
 
 int checkIfWon(const struct game_t *game){
-    // Returns 0 if won, 1 if not won
+    // Returns 1 if won, 0 if not won
     for(int i = 0; i < N; i++){
         if(game->board[i]!= EMPTY){
             if(game->board[i] == game->board[i + N] && game->board[i] == game->board[i + 2 * N]){
@@ -217,17 +222,16 @@ int checkIfWon(const struct game_t *game){
 }
 
 int checkIfTie(const struct game_t *game){
-    // returns 1 if not tie
-    // returns 0 if tie
+    // returns 0 if not tie
+    // returns 1 if tie
 
     for(int i = 0; i < N * N ; i++){
         if(game->board[i] == EMPTY){
-            return 1;
+            return 0;
         }
     }
-    return 0;
+    return 1;
 }
-
 
 void resetBoard(struct game_t *game){
     int i;
@@ -238,8 +242,156 @@ void resetBoard(struct game_t *game){
     }
 }
 
-
 /* ------------------------- LOGIC END -------------------------------- */
+
+/* ------------------------- AI SECTION ----------------------------------*/
+// DOESNT WORK!!
+
+void clickAI(struct game_t *game){
+    int choice;
+
+    choice = minMaxAI(*game);
+    game->board[choice] = game->player;
+
+}
+
+
+
+
+int minMaxAI(struct game_t game){
+    // returns the position where the move should be made
+    int score = -2; // -1 to 1, it is -2 to make it can only go higher increase.
+    int scoreIndex; // The index of best score.
+    int temp;
+    int depth;
+
+    if(deathCheak(game, &scoreIndex) == 1){return scoreIndex;}
+
+    for(int i = 0; i < N* N; i++){
+
+        if(game.board[i] == EMPTY){
+            game.board[i] = game.player;
+
+            temp = minMax(game, 0, 0);
+            if(temp > score){
+                score = temp;
+                scoreIndex = i;
+
+            }
+
+            game.board[i] = EMPTY;
+
+        }
+    }
+    return scoreIndex;
+}
+
+int deathCheak(struct game_t game, int *deathblock){
+    for(int i = 0; i < N* N; i++){
+        printf("\nfor i = %d block[i] = %d", i, game.board[i] );
+        if(game.board[i] == EMPTY){
+            game.board[i] = 1;
+            printf("\nhere");
+            if(checkIfWon(&game) == 1){
+                *deathblock = i;
+                return 1;
+            }
+            game.board[i] = EMPTY;
+
+        }
+    }
+    return 0;
+}
+
+
+int minMax(struct game_t game, int depth, int isMaximizing){
+    // Returns 1 if good for current player
+    // 0 if tie
+    // -1 if lose
+    int player = 0;
+    int score, temp;
+
+    if(checkWon(&game, &player) == 1){
+        if(player == 1){
+            return -5;
+        }
+        else if(player == 2){
+         return 5;
+        }
+    }
+    if(checkIfTie(&game) == 1){
+        return 0;
+    }
+
+    if(isMaximizing == 1){
+        score = -10;
+        for(int i = 0; i < N* N; i++){
+            if(game.board[i] == EMPTY){
+                game.board[i] = 2;
+
+                temp = minMax(game, depth + 1, 0);
+                if(temp > score){
+                    score = temp;
+                }
+                game.board[i] = EMPTY;
+
+            }
+        }
+        return score;
+
+    }else{
+        score = 10;
+        for(int i = 0; i < N* N; i++){
+            if(game.board[i] == EMPTY){
+                game.board[i] = 1;
+                temp = minMax(game, depth + 1, 1);
+                if(temp < score){
+                    score = temp;
+                }
+                game.board[i] = EMPTY;
+
+            }
+        }
+        //printf("%d", score);
+
+        return score;
+    }
+
+}
+
+int checkWon(const struct game_t *game,int *player){
+    // Returns 0 if won, 1 if not won
+    for(int i = 0; i < N; i++){
+        if(game->board[i]!= EMPTY){
+            if(game->board[i] == game->board[i + N] && game->board[i] == game->board[i + 2 * N]){
+                *player = game->board[i];
+                return 1;
+            }
+        }
+
+        if(game->board[i * N] != EMPTY){
+            if(game->board[i * 3] == game->board[i * 3 + 1] && game->board[i * 3] == game->board[i * 3 + 2]){
+                *player = game->board[i];
+                return 1;
+            }
+        }
+    }
+
+    if(game->board[4] != EMPTY){
+        if(game->board[0] == game->board[4] && game->board[4] == game->board[8]){
+            *player = game->board[0];
+            return 1;
+        }else if(game ->board[2] == game->board[4] && game->board[4] == game->board[6]){
+            *player = game->board[2];
+            return 1;
+        }
+    }
+
+
+    return 0;
+}
+
+/* ------------------------- AI SECTION END -------------------------------- */
 int main(int argc, char* argv[]){
         SDL_Window* window;
         SDL_Renderer* renderer;
