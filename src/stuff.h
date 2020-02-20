@@ -12,7 +12,7 @@
 #define PLAYER_O 2
 
 #define PLAY_STATE 0
-#define PLAYER_X_WON 1
+#define PLAYER_X_WON 01
 #define PLAYER_O_WON 2
 #define TIE_STATE 3
 #define QUIT_STATE 4

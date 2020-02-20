@@ -4,8 +4,7 @@
 #include<SDL2/SDL_timer.h>
 #include<SDL_image.h>
 #include<stdlib.h>
-
-#include <SDL2/SDL.h>
+#include<math.h>
 #include "stuff.h"
 
 const SDL_Color GRID_COLOR = { .r = 0, .g = 0, .b = 0 };
@@ -58,14 +57,59 @@ void draw_O(SDL_Renderer *Renderer, int index, SDL_Color *color){
         // a11, a12 ... a21
     celli = index / N;
     cellj = index % N;
+    int diameter = 100;
+    int radius, i;
 
     centerX = cellCenterX + CELL_WIDTH * cellj;
     centerY = cellCenterY + CELL_HEIGHT * celli;
 
     SDL_SetRenderDrawColor(Renderer, color->r, color->g, color->b, 255);
+    /*
     for(int i = 0; i < 5; i++){
         SDL_RenderDrawLine(Renderer, centerX - CELL_WIDTH / 4 , centerY + i, centerX + CELL_WIDTH / 4, centerY + i);
     }
+
+
+    for(int i = centerY - CELL_HEIGHT / 4 ; i < centerY + CELL_HEIGHT / 4; i++){
+        SDL_RenderDrawPoint(Renderer,centerX + sqrt(r * r - i * i),i);
+    }
+    */
+    for(i = 0; i < 5; i++){
+        diameter += 2;
+        radius = diameter / 2;
+        int x = (radius - 1);
+        int y = 0;
+        int tx = 1;
+        int ty = 1;
+        int error = (tx - diameter);
+
+        while (x >= y){
+            //  Each of the following renders an octant of the circle
+            SDL_RenderDrawPoint(Renderer, centerX + x, centerY - y);
+            SDL_RenderDrawPoint(Renderer, centerX + x, centerY + y);
+            SDL_RenderDrawPoint(Renderer, centerX - x, centerY - y);
+            SDL_RenderDrawPoint(Renderer, centerX - x, centerY + y);
+            SDL_RenderDrawPoint(Renderer, centerX + y, centerY - x);
+            SDL_RenderDrawPoint(Renderer, centerX + y, centerY + x);
+            SDL_RenderDrawPoint(Renderer, centerX - y, centerY - x);
+            SDL_RenderDrawPoint(Renderer, centerX - y, centerY + x);
+
+            if (error <= 0)
+            {
+                ++y;
+                error += ty;
+                ty += 2;
+            }
+
+            if (error > 0)
+            {
+                --x;
+                tx += 2;
+                error += (tx - diameter);
+            }
+        }
+    }
+
 }
 
 void render_blocks(SDL_Renderer *Renderer, struct game_t *game){
@@ -171,7 +215,6 @@ void clickBlock(struct game_t *game, int index){
 
         }
     }
-
 }
 
 void onClick(struct game_t* game, int index){
@@ -245,18 +288,21 @@ void resetBoard(struct game_t *game){
 /* ------------------------- LOGIC END -------------------------------- */
 
 /* ------------------------- AI SECTION ----------------------------------*/
-// DOESNT WORK!!
+// SORTA WORK
+// 1 EDGE CASE
 
 void clickAI(struct game_t *game){
     int choice;
 
     choice = minMaxAI(*game);
+
+    if(game->board[4] == EMPTY){
+        choice = 4;
+    }
+
     game->board[choice] = game->player;
 
 }
-
-
-
 
 int minMaxAI(struct game_t game){
     // returns the position where the move should be made
@@ -265,6 +311,7 @@ int minMaxAI(struct game_t game){
     int temp;
     int depth;
 
+    if(wonCheck(game, &scoreIndex) == 1){return scoreIndex;}
     if(deathCheak(game, &scoreIndex) == 1){return scoreIndex;}
 
     for(int i = 0; i < N* N; i++){
@@ -303,6 +350,22 @@ int deathCheak(struct game_t game, int *deathblock){
     return 0;
 }
 
+int wonCheck(struct game_t game, int *deathblock){
+    for(int i = 0; i < N* N; i++){
+        printf("\nfor i = %d block[i] = %d", i, game.board[i] );
+        if(game.board[i] == EMPTY){
+            game.board[i] = 2;
+            printf("\nhere");
+            if(checkIfWon(&game) == 1){
+                *deathblock = i;
+                return 1;
+            }
+            game.board[i] = EMPTY;
+
+        }
+    }
+    return 0;
+}
 
 int minMax(struct game_t game, int depth, int isMaximizing){
     // Returns 1 if good for current player
@@ -313,10 +376,10 @@ int minMax(struct game_t game, int depth, int isMaximizing){
 
     if(checkWon(&game, &player) == 1){
         if(player == 1){
-            return -5;
+            return -2;
         }
         else if(player == 2){
-         return 5;
+         return 2;
         }
     }
     if(checkIfTie(&game) == 1){
@@ -392,6 +455,7 @@ int checkWon(const struct game_t *game,int *player){
 }
 
 /* ------------------------- AI SECTION END -------------------------------- */
+
 int main(int argc, char* argv[]){
         SDL_Window* window;
         SDL_Renderer* renderer;
@@ -448,6 +512,6 @@ int main(int argc, char* argv[]){
         SDL_RenderPresent(renderer);
         }
         SDL_Quit();
-        return 0;
+    return 0;
 }
 
